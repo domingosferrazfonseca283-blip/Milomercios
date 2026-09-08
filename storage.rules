@@ -2,12 +2,29 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true; }
+    function isAdmin() {
+      return signedIn() &&
+        request.auth.token.email == 'domingosferrazfonseca283@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
     match /comprovativos/{uid}/{fileName} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() && request.auth.uid == uid &&
+        request.resource.size <= 10 * 1024 * 1024 &&
+        (request.resource.contentType.matches('image/.*') ||
+         request.resource.contentType == 'application/pdf');
       allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
     }
+
+    match /produtos/{uid}/{produtoId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == uid &&
+        request.resource.size <= 8 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
     match /{allPaths=**} { allow read, write: if false; }
   }
 }
