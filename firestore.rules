@@ -2,46 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function isAdmin() {
-      return signedIn() && request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin' && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.email == 'domingosferrazfonseca283@gmail.com';
-    }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin' && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.email == 'domingosferrazfonseca283@gmail.com'; }
     function isSeller() { return signedIn() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'vendedor'; }
     function activeSeller() { return isSeller() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.estadoConta == 'ativo' && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.subscricaoAtiva == true; }
     function sellerOrder() { return isSeller() && resource.data.sellerIds is list && request.auth.uid in resource.data.sellerIds; }
     function sellerOrderUpdate() { return sellerOrder() && request.resource.data.clienteId == resource.data.clienteId && request.resource.data.items == resource.data.items && request.resource.data.total == resource.data.total && request.resource.data.sellerIds == resource.data.sellerIds && request.resource.data.paymentMethod == resource.data.paymentMethod && request.resource.data.paymentStatus == resource.data.paymentStatus && request.resource.data.customer == resource.data.customer && request.resource.data.criadoEm == resource.data.criadoEm; }
     match /usuarios/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-      allow create: if signedIn() && request.auth.uid == uid && ((request.resource.data.tipo == 'vendedor' && request.resource.data.estadoConta == 'pendente' && request.resource.data.subscricaoAtiva == false) || (request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && request.resource.data.tipo == 'admin' && request.resource.data.email == 'domingosferrazfonseca283@gmail.com'));
+      allow create: if signedIn() && request.auth.uid == uid && ((request.resource.data.tipo == 'vendedor' && request.resource.data.estadoConta == 'pendente' && request.resource.data.subscricaoAtiva == false) || (request.resource.data.tipo == 'cliente' && request.resource.data.estadoConta == 'ativo' && request.resource.data.subscricaoAtiva == false) || (request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && request.resource.data.tipo == 'admin' && request.resource.data.email == 'domingosferrazfonseca283@gmail.com'));
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && request.resource.data.tipo == 'admin' && request.resource.data.email == 'domingosferrazfonseca283@gmail.com') || (signedIn() && request.auth.uid == uid && request.resource.data.tipo == resource.data.tipo && request.resource.data.estadoConta == resource.data.estadoConta && request.resource.data.subscricaoAtiva == resource.data.subscricaoAtiva);
       allow delete: if isAdmin();
     }
-    match /lojas/{uid} {
-      allow read: if true;
-      allow create, update: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller() && request.resource.data.vendedorId == uid);
-      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller());
-    }
-    match /produtos/{produtoId} {
-      allow read: if resource.data.ativo == true || isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid);
-      allow create: if activeSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.ativo == false && request.resource.data.estadoAprovacao == 'pendente';
-      allow update: if isAdmin() || (activeSeller() && resource.data.vendedorId == request.auth.uid && request.resource.data.vendedorId == resource.data.vendedorId && resource.data.ativo == false);
-      allow delete: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid && resource.data.ativo == false);
-    }
-    match /avaliacoes/{reviewId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
+    match /lojas/{uid} { allow read: if true; allow create, update: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller() && request.resource.data.vendedorId == uid); allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller()); }
+    match /produtos/{produtoId} { allow read: if resource.data.ativo == true || isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid); allow create: if activeSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.ativo == false && request.resource.data.estadoAprovacao == 'pendente'; allow update: if isAdmin() || (activeSeller() && resource.data.vendedorId == request.auth.uid && request.resource.data.vendedorId == resource.data.vendedorId && resource.data.ativo == false); allow delete: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid && resource.data.ativo == false); }
+    match /avaliacoes/{reviewId} { allow read: if true; allow create, update, delete: if isAdmin(); }
     match /configuracao/{docId} { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /pedidosSubscricao/{pedidoId} {
-      allow create: if signedIn() && isSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.adminEmail == 'domingosferrazfonseca283@gmail.com';
-      allow read: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid);
-      allow update, delete: if isAdmin();
-    }
-    match /pedidos/{pedidoId} {
-      allow create: if isAdmin() || (signedIn() && request.resource.data.clienteId == request.auth.uid);
-      allow read: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrder();
-      allow update: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrderUpdate();
-      allow delete: if isAdmin();
-    }
+    match /pedidosSubscricao/{pedidoId} { allow create: if signedIn() && isSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.adminEmail == 'domingosferrazfonseca283@gmail.com'; allow read: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid); allow update, delete: if isAdmin(); }
+    match /pedidos/{pedidoId} { allow create: if isAdmin() || (signedIn() && request.resource.data.clienteId == request.auth.uid); allow read: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrder(); allow update: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrderUpdate(); allow delete: if isAdmin(); }
     match /{document=**} { allow read, write: if false; }
   }
 }
