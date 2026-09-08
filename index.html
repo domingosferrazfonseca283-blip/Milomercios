@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Milomercios — compre e venda produtos e eBooks online.">
+  <title>Milomercios | Compre e venda online</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="logo" href="#">Milo<span>mercio</span></a>
+      <nav>
+        <a href="#produtos">Produtos</a>
+        <a href="#ebooks">eBooks</a>
+        <a href="#vender">Vender</a>
+      </nav>
+      <button class="cart" id="cartBtn" aria-label="Abrir carrinho">🛒 <b id="cartCount">0</b></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">🛍️ Marketplace online</p>
+          <h1>Compre. Venda.<br><span>Faça acontecer.</span></h1>
+          <p class="lead">Encontre produtos, descubra eBooks e transforme as suas ideias em negócios.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#produtos">Explorar produtos</a>
+            <a class="btn secondary" href="#vender">Começar a vender</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-icon">🛍️</div>
+          <h3>Seu marketplace, suas oportunidades</h3>
+          <p>Uma experiência simples para compradores e vendedores.</p>
+          <div class="mini-stats"><span><strong>+1.000</strong><small>produtos</small></span><span><strong>+200</strong><small>eBooks</small></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container section" id="produtos">
+      <div class="section-head"><div><p class="eyebrow">Descubra</p><h2>Produtos em destaque</h2></div><a href="#produtos">Ver todos →</a></div>
+      <div class="products" id="productGrid"></div>
+    </section>
+
+    <section class="ebook-band" id="ebooks">
+      <div class="container ebook-grid">
+        <div><p class="eyebrow">📚 Conhecimento digital</p><h2>eBooks para aprender, criar e crescer.</h2><p>Conteúdos digitais para desenvolvimento pessoal, negócios, tecnologia e muito mais.</p><a class="btn primary" href="#produtos">Explorar eBooks</a></div>
+        <div class="book-stack"><div>📖</div><div>📘</div><div>📕</div></div>
+      </div>
+    </section>
+
+    <section class="container seller" id="vender">
+      <div><p class="eyebrow">Para vendedores</p><h2>Transforme o que você faz em renda.</h2><p>Publique seus produtos e eBooks, alcance novos clientes e acompanhe suas vendas.</p></div>
+      <a class="btn primary" href="mailto:contato@milomercios.ao?subject=Quero%20vender%20na%20Milomercios">Quero vender</a>
+    </section>
+  </main>
+
+  <footer><div class="container footer"><strong>Milomercios</strong><span>© 2026 — Marketplace de produtos e eBooks.</span></div></footer>
+  <script src="script.js"></script>
+</body>
+</html>
