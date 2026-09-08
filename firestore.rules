@@ -16,6 +16,11 @@ service cloud.firestore {
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && request.auth.token.email == 'domingosferrazfonseca283@gmail.com' && request.auth.token.email_verified == true && request.resource.data.tipo == 'admin' && request.resource.data.email == 'domingosferrazfonseca283@gmail.com') || (signedIn() && request.auth.uid == uid && request.resource.data.tipo == resource.data.tipo && request.resource.data.estadoConta == resource.data.estadoConta && request.resource.data.subscricaoAtiva == resource.data.subscricaoAtiva);
       allow delete: if isAdmin();
     }
+    match /lojas/{uid} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller() && request.resource.data.vendedorId == uid);
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && isSeller());
+    }
     match /produtos/{produtoId} {
       allow read: if resource.data.ativo == true || isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid);
       allow create: if activeSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.ativo == false && request.resource.data.estadoAprovacao == 'pendente';
@@ -28,7 +33,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid);
       allow update, delete: if isAdmin();
     }
-    match /pedidos/{pedidoId} {
+    match /pedidos/{pedidoId> {
       allow create: if isAdmin() || (signedIn() && request.resource.data.clienteId == request.auth.uid);
       allow read: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrder();
       allow update: if isAdmin() || (signedIn() && resource.data.clienteId == request.auth.uid) || sellerOrderUpdate();
