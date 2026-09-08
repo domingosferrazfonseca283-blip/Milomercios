@@ -1,93 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-AO">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Milomercios — compre e venda produtos e eBooks online.">
-  <title>Milomercios | Compre e venda online</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Milomércios | Marketplace Angolano</title>
+  <link rel="stylesheet" href="Style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="container nav">
-      <a class="logo" href="#">Milo<span>mercio</span>s</a>
-      <nav>
-        <a href="#produtos">Produtos</a>
-        <a href="#ebooks">eBooks</a>
-        <a href="#vender">Vender</a>
-      </nav>
-      <button class="cart" id="cartBtn" aria-label="Abrir carrinho">🛒 <b id="cartCount">0</b></button>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div>
-          <p class="eyebrow">🛍️ Marketplace online</p>
-          <h1>Compre. Venda.<br><span>Faça acontecer.</span></h1>
-          <p class="lead">Encontre produtos, descubra eBooks e transforme as suas ideias em negócios.</p>
-          <div class="hero-actions">
-            <a class="btn primary" href="#produtos">Explorar produtos</a>
-            <a class="btn secondary" href="#vender">Começar a vender</a>
-          </div>
-        </div>
-        <div class="hero-card">
-          <div class="hero-icon">🛍️</div>
-          <h3>Seu marketplace, suas oportunidades</h3>
-          <p>Uma experiência simples para compradores e vendedores.</p>
-          <div class="mini-stats"><span><strong>+1.000</strong><small>produtos</small></span><span><strong>+200</strong><small>eBooks</small></span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="container section" id="produtos">
-      <div class="section-head">
-        <div><p class="eyebrow">Descubra</p><h2>Produtos em destaque</h2></div>
-        <a href="#produtos">Ver todos →</a>
-      </div>
-      <div class="products" id="productGrid"></div>
-    </section>
-
-    <section class="ebook-band" id="ebooks">
-      <div class="container ebook-grid">
-        <div><p class="eyebrow">📚 Conhecimento digital</p><h2>eBooks para aprender, criar e crescer.</h2><p>Conteúdos digitais para desenvolvimento pessoal, negócios, tecnologia e muito mais.</p><a class="btn primary" href="#produtos">Explorar eBooks</a></div>
-        <div class="book-stack"><div>📖</div><div>📘</div><div>📕</div></div>
-      </div>
-    </section>
-
-    <section class="container seller" id="vender">
-      <div><p class="eyebrow">Para vendedores</p><h2>Transforme o que você faz em renda.</h2><p>Publique seus produtos e eBooks, alcance novos clientes e acompanhe suas vendas.</p></div>
-      <a class="btn primary" href="mailto:contato@milomercios.ao?subject=Quero%20vender%20na%20Milomercios">Quero vender</a>
-    </section>
-  </main>
-
-  <div class="overlay" id="overlay"></div>
-
-  <aside class="cart-panel" id="cartPanel" aria-hidden="true">
-    <div class="panel-head"><h2>Seu carrinho</h2><button class="close" id="closeCart" aria-label="Fechar carrinho">×</button></div>
-    <div class="cart-items" id="cartItems"></div>
-    <div class="cart-footer">
-      <div><span>Total</span><strong id="cartTotal">0 Kz</strong></div>
-      <button class="btn primary checkout" id="checkoutBtn">Continuar para checkout</button>
-    </div>
-  </aside>
-
-  <div class="product-modal" id="productModal" aria-hidden="true">
-    <div class="modal-card">
-      <button class="close modal-close" id="closeProduct" aria-label="Fechar produto">×</button>
-      <div class="modal-art" id="modalArt"></div>
-      <div class="modal-content">
-        <span class="tag" id="modalTag"></span>
-        <h2 id="modalName"></h2>
-        <div class="modal-price" id="modalPrice"></div>
-        <p id="modalDescription"></p>
-        <button class="btn primary checkout" id="modalAdd">Adicionar ao carrinho</button>
-      </div>
-    </div>
-  </div>
-
-  <footer><div class="container footer"><strong>Milomercios</strong><span>© 2026 — Marketplace de produtos e eBooks.</span></div></footer>
-  <script src="script.js"></script>
-</body>
-</html>
+<header><div class="logo">Milomércios</div><nav><a href="login.html" style="color:white;text-decoration:none;margin-right:14px">Entrar</a><a href="registo.html" style="color:white;text-decoration:none">Vender</a><a href="carrinho.html" style="color:white;text-decoration:none;margin-left:14px"><i class="fas fa-shopping-cart"></i> <span id="cart-count">0</span></a></nav></header>
+<nav class="categories"><button onclick="filter('todos')">Todos</button><button onclick="filter('eletronicos')">Eletrónicos</button><button onclick="filter('moda')">Moda</button><button onclick="filter('casa')">Casa</button><button onclick="filter('outros')">Outros</button></nav>
+<main id="app"><div class="loader">Carregando Milomércios...</div></main>
+<script type="module" src="Script.js"></script>
+</body></html>
