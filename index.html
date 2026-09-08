@@ -2,12 +2,26 @@
 <html lang="pt-AO">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Milomércios — marketplace angolano para comprar e vender produtos online.">
   <title>Milomércios | Marketplace Angolano</title>
   <link rel="stylesheet" href="Style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-<header><div class="logo">Milomércios</div><nav><a href="login.html" style="color:white;text-decoration:none;margin-right:14px">Entrar</a><a href="registo.html" style="color:white;text-decoration:none">Vender</a><a href="carrinho.html" style="color:white;text-decoration:none;margin-left:14px"><i class="fas fa-shopping-cart"></i> <span id="cart-count">0</span></a></nav></header>
-<nav class="categories"><button onclick="filter('todos')">Todos</button><button onclick="filter('eletronicos')">Eletrónicos</button><button onclick="filter('moda')">Moda</button><button onclick="filter('casa')">Casa</button><button onclick="filter('outros')">Outros</button></nav>
-<main id="app"><div class="loader">Carregando Milomércios...</div></main>
+<header class="site-header">
+  <a class="brand" href="index.html" aria-label="Milomércios início"><span class="brand-mark"><i class="fas fa-store"></i></span><span>Milomércios</span></a>
+  <nav class="main-nav" aria-label="Navegação principal"><a href="login.html"><i class="fas fa-right-to-bracket"></i> Entrar</a><a class="nav-sell" href="registo.html"><i class="fas fa-store"></i> Vender</a><a class="cart-link" href="carrinho.html" aria-label="Abrir carrinho"><i class="fas fa-shopping-cart"></i><span>Carrinho</span><b id="cart-count">0</b></a></nav>
+</header>
+<main>
+  <section class="hero">
+    <div class="hero-copy"><span class="eyebrow"><i class="fas fa-location-dot"></i> Feito para Angola</span><h1>Compre e venda de forma <strong>simples.</strong></h1><p>Descubra produtos de vendedores locais, compare opções e faça a sua encomenda num só lugar.</p><div class="hero-actions"><a class="primary-btn" href="#catalogo">Explorar produtos <i class="fas fa-arrow-right"></i></a><a class="secondary-btn" href="registo.html">Quero vender</a></div></div>
+    <div class="hero-panel" aria-hidden="true"><div class="hero-icon"><i class="fas fa-bag-shopping"></i></div><div><strong>Marketplace em crescimento</strong><span>Produtos • Vendedores • Encomendas</span></div><i class="fas fa-arrow-trend-up trend"></i></div>
+  </section>
+  <section class="catalog-section" id="catalogo">
+    <div class="section-heading"><div><span class="section-kicker">CATÁLOGO</span><h2>Encontre o que procura</h2></div><div class="catalog-tools"><label class="search-box" for="search-input"><i class="fas fa-search"></i><input id="search-input" type="search" placeholder="Pesquisar produtos..." autocomplete="off"></label><select id="sort-select" aria-label="Ordenar produtos"><option value="relevancia">Mais relevantes</option><option value="preco-menor">Preço: menor</option><option value="preco-maior">Preço: maior</option><option value="nome">Nome: A–Z</option></select></div></div>
+    <div class="categories" aria-label="Categorias"><button class="active" data-category="todos" onclick="filter('todos')"><i class="fas fa-border-all"></i> Todos</button><button data-category="eletronicos" onclick="filter('eletronicos')"><i class="fas fa-mobile-screen-button"></i> Eletrónicos</button><button data-category="moda" onclick="filter('moda')"><i class="fas fa-shirt"></i> Moda</button><button data-category="casa" onclick="filter('casa')"><i class="fas fa-house"></i> Casa</button><button data-category="outros" onclick="filter('outros')"><i class="fas fa-box"></i> Outros</button></div>
+    <div id="catalog-status" class="catalog-status">A carregar produtos...</div><section id="app" class="product-grid" aria-live="polite"><div class="loader"><i class="fas fa-spinner fa-spin"></i> Carregando Milomércios...</div></section>
+  </section>
+</main>
+<footer class="site-footer"><div><strong>Milomércios</strong><span>Marketplace angolano para comprar e vender.</span></div><div class="footer-links"><a href="login.html">Entrar</a><a href="registo.html">Vender</a><a href="carrinho.html">Carrinho</a></div></footer>
 <script type="module" src="Script.js"></script>
 </body></html>
