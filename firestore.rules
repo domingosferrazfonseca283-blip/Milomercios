@@ -26,6 +26,10 @@ service cloud.firestore {
       allow update: if isAdmin() || (activeSeller() && resource.data.vendedorId == request.auth.uid && request.resource.data.vendedorId == resource.data.vendedorId && resource.data.ativo == false);
       allow delete: if isAdmin() || (signedIn() && resource.data.vendedorId == request.auth.uid && resource.data.ativo == false);
     }
+    match /avaliacoes/{reviewId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
     match /configuracao/{docId} { allow read: if signedIn(); allow write: if isAdmin(); }
     match /pedidosSubscricao/{pedidoId} {
       allow create: if signedIn() && isSeller() && request.resource.data.vendedorId == request.auth.uid && request.resource.data.adminEmail == 'domingosferrazfonseca283@gmail.com';
