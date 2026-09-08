@@ -1,0 +1,12 @@
+{
+  "name": "milomercios-functions",
+  "description": "Backend seguro do Milomércios",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "scripts": { "lint": "echo 'lint não configurado'" },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "private": true
+}
