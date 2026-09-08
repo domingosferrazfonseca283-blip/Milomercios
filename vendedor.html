@@ -1,1 +1,82 @@
-<!DOCTYPE html><html lang="pt-AO"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vendedor | Milomércios</title><link rel="stylesheet" href="Style.css"></head><body><header><button id="btn-logout">Sair</button><div class="logo">Painel do Vendedor</div><a href="index.html" style="color:white">Ver Loja</a></header><main style="max-width:1000px;margin:25px auto;padding:0 15px"><section class="card"><h2 id="nome-loja">Minha loja</h2><p id="email"></p><p id="estado">A validar...</p></section><section class="card"><h3>Perfil público da loja</h3><p>Estas informações serão mostradas aos clientes na página pública da sua loja.</p><input id="loja-nome" placeholder="Nome da loja"><textarea id="loja-descricao" placeholder="Descrição da loja"></textarea><input id="loja-localizacao" placeholder="Localização (ex.: Luanda, Angola)"><input id="loja-telefone" placeholder="Telefone"><input id="loja-whatsapp" placeholder="WhatsApp"><input id="loja-imagem" type="url" placeholder="URL do logotipo/imagem da loja"><button class="btn" id="btn-perfil">Guardar perfil da loja</button><p id="perfil-status"></p><p><a id="link-loja" href="#">Abrir página pública da loja</a></p></section><section class="card"><h3>Subscrição</h3><p id="sub-info">A carregar...</p><button class="btn" id="btn-pedir">Solicitar/renovar subscrição</button></section><section class="card"><h3>Adicionar produto</h3><input id="produto-nome" placeholder="Nome do produto"><input id="produto-preco" type="number" min="0.01" step="0.01" placeholder="Preço (Kz)"><input id="produto-stock" type="number" min="0" step="1" placeholder="Quantidade em stock"><input id="produto-categoria" placeholder="Categoria"><textarea id="produto-descricao" placeholder="Descrição"></textarea><button class="btn" id="btn-produto">Publicar produto</button></section><section class="card"><h3>Meus produtos</h3><div id="produtos-list">A carregar...</div></section><section class="card"><h3>Encomendas / Vendas</h3><div id="pedidos-list">A carregar...</div></section></main><script type="module" src="vendedor.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vendedor | Milomércios</title>
+  <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+  <header>
+    <button id="btn-logout">Sair</button>
+    <div class="logo">Painel do Vendedor</div>
+    <a href="index.html" style="color:white">Ver Loja</a>
+  </header>
+  <main style="max-width:1000px;margin:25px auto;padding:0 15px">
+    <section class="card">
+      <h2 id="nome-loja">Minha loja</h2>
+      <p id="email"></p>
+      <p id="estado">A validar...</p>
+    </section>
+
+    <section class="card">
+      <h3>Perfil público da loja</h3>
+      <p>Estas informações serão mostradas aos clientes na página pública da sua loja.</p>
+      <input id="loja-nome" placeholder="Nome da loja">
+      <textarea id="loja-descricao" placeholder="Descrição da loja"></textarea>
+      <input id="loja-localizacao" placeholder="Localização (ex.: Luanda, Angola)">
+      <input id="loja-telefone" placeholder="Telefone">
+      <input id="loja-whatsapp" placeholder="WhatsApp">
+      <input id="loja-imagem" type="url" placeholder="URL do logotipo/imagem da loja">
+      <button class="btn" id="btn-perfil">Guardar perfil da loja</button>
+      <p id="perfil-status"></p>
+      <p><a id="link-loja" href="#">Abrir página pública da loja</a></p>
+    </section>
+
+    <section class="card">
+      <h3>Subscrição do vendedor</h3>
+      <p id="sub-info">A carregar...</p>
+      <p id="sub-pagamento" class="notice">Solicite a subscrição para receber as instruções de pagamento.</p>
+      <button class="btn" id="btn-pedir">Solicitar/renovar subscrição</button>
+      <div id="comprovativo-area" style="display:none;margin-top:15px">
+        <label for="comprovativo">Comprovativo de pagamento (imagem ou PDF)</label>
+        <input id="comprovativo" type="file" accept="image/*,application/pdf">
+        <button class="btn" id="btn-comprovativo" disabled>Enviar comprovativo</button>
+        <div id="comprovativo-progresso" style="display:none;margin-top:10px">
+          <progress id="barra-progresso" value="0" max="100" style="width:100%"></progress>
+          <span id="progresso-texto">0%</span>
+        </div>
+        <p id="comprovativo-status"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Adicionar produto</h3>
+      <input id="produto-nome" placeholder="Nome do produto">
+      <input id="produto-preco" type="number" min="0.01" step="0.01" placeholder="Preço (Kz)">
+      <input id="produto-stock" type="number" min="0" step="1" placeholder="Quantidade em stock">
+      <input id="produto-categoria" placeholder="Categoria">
+      <textarea id="produto-descricao" placeholder="Descrição"></textarea>
+      <label for="produto-imagem">Foto do produto</label>
+      <input id="produto-imagem" type="file" accept="image/*">
+      <button class="btn" id="btn-produto">Enviar produto para aprovação</button>
+      <div id="produto-progresso" style="display:none;margin-top:10px">
+        <progress id="produto-barra" value="0" max="100" style="width:100%"></progress>
+        <span id="produto-progresso-texto">0%</span>
+      </div>
+      <p id="produto-status"></p>
+    </section>
+
+    <section class="card">
+      <h3>Meus produtos</h3>
+      <div id="produtos-list">A carregar...</div>
+    </section>
+
+    <section class="card">
+      <h3>Encomendas / Vendas</h3>
+      <div id="pedidos-list">A carregar...</div>
+    </section>
+  </main>
+  <script type="module" src="vendedor.js"></script>
+</body>
+</html>
