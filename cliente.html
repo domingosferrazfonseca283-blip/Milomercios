@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Minha conta | Milomércios</title>
+  <link rel="stylesheet" href="Style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .account-wrap{max-width:1100px;margin:28px auto 55px;padding:0 16px}.account-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:18px}.account-head h1{color:var(--primaria);font-size:2rem}.account-grid{display:grid;grid-template-columns:1fr 1.35fr;gap:18px}.order{border:1px solid var(--linha);border-radius:12px;padding:15px;margin:10px 0;background:#fff}.order-top{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#eef2f5;font-size:.75rem;font-weight:800}.order-items{margin:10px 0;color:var(--muted);font-size:.9rem}.order-items a{color:var(--primaria);font-weight:700;text-decoration:none}.muted{color:var(--muted)}.empty{padding:25px;text-align:center;color:var(--muted);border:1px dashed #ccd5de;border-radius:12px}.account-actions{display:flex;gap:8px;flex-wrap:wrap}.btn-secondary{display:inline-block;border:1px solid var(--linha);background:#fff;color:var(--primaria);padding:11px 14px;border-radius:7px;font-weight:700;text-decoration:none;margin-top:12px}@media(max-width:800px){.account-grid{grid-template-columns:1fr}.account-head{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<header><div class="logo">Minha conta</div><div class="account-actions"><a class="btn-secondary" href="index.html">Comprar</a><button class="btn" id="btn-sair">Sair</button></div></header>
+<main class="account-wrap">
+  <div class="account-head"><div><h1 id="boas-vindas">Minha conta</h1><p class="muted">Gerencie os seus dados e acompanhe as suas encomendas.</p></div></div>
+  <div class="account-grid">
+    <section class="card"><h2>Os meus dados</h2><label>Nome</label><input id="nome" type="text" placeholder="O seu nome"><label>E-mail</label><input id="email" type="email" disabled><label>Telefone</label><input id="telefone" type="tel" placeholder="Ex.: 923 000 000"><label>Morada</label><textarea id="morada" placeholder="Morada para entrega"></textarea><button class="btn" id="btn-salvar">Guardar dados</button><p id="perfil-status" class="muted" style="margin-top:10px"></p></section>
+    <section class="card"><h2>Histórico de encomendas</h2><p id="pedidos-status" class="muted">A carregar encomendas...</p><div id="pedidos"></div></section>
+  </div>
+</main>
+<script type="module" src="cliente.js"></script>
+</body>
+</html>
