@@ -4,37 +4,40 @@ import { collection, getDocs, query, where } from 'https://www.gstatic.com/fireb
 let produtos = [];
 const app = document.getElementById('app');
 const cartCount = document.getElementById('cart-count');
+const status = document.getElementById('catalog-status');
+const searchInput = document.getElementById('search-input');
+const sortSelect = document.getElementById('sort-select');
 let categoriaAtual = 'todos';
+let pesquisaAtual = '';
 
 function normalizarProduto(id, data) {
-  return {
-    id,
-    nome: data.nome || 'Produto sem nome',
-    preco: Number(data.preco || 0),
-    stock: Math.max(0, Math.floor(Number(data.stock) || 0)),
-    categoria: String(data.categoria || 'outros').toLowerCase(),
-    descricao: data.descricao || '',
-    img: data.img || data.imagemUrl || '',
-    vendedorId: data.vendedorId || ''
-  };
+  return { id, nome:data.nome||'Produto sem nome', preco:Number(data.preco||0), stock:Math.max(0,Math.floor(Number(data.stock)||0)), categoria:String(data.categoria||'outros').toLowerCase(), descricao:data.descricao||'', img:data.img||data.imagemUrl||'', vendedorId:data.vendedorId||'' };
 }
 
 function renderizarLoja() {
-  const lista = categoriaAtual === 'todos' ? produtos : produtos.filter(p => p.categoria === categoriaAtual);
+  let lista = categoriaAtual === 'todos' ? [...produtos] : produtos.filter(p => p.categoria === categoriaAtual);
+  if (pesquisaAtual) {
+    const termo = pesquisaAtual.toLocaleLowerCase('pt-AO');
+    lista = lista.filter(p => `${p.nome} ${p.descricao} ${p.categoria}`.toLocaleLowerCase('pt-AO').includes(termo));
+  }
+  const ordenacao = sortSelect?.value || 'relevancia';
+  if (ordenacao === 'preco-menor') lista.sort((a,b)=>a.preco-b.preco);
+  if (ordenacao === 'preco-maior') lista.sort((a,b)=>b.preco-a.preco);
+  if (ordenacao === 'nome') lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt'));
+
+  if (status) status.textContent = `${lista.length} ${lista.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`;
   app.innerHTML = lista.length ? lista.map(prod => {
     const disponivel = prod.stock > 0;
-    return `<div class="product-card">
-      ${prod.img ? `<img src="${escapeHtml(prod.img)}" alt="${escapeHtml(prod.nome)}">` : '<div style="height:180px;display:flex;align-items:center;justify-content:center;background:#f1f3f5">Sem imagem</div>'}
-      <h3>${escapeHtml(prod.nome)}</h3>
-      <p>${Number(prod.preco).toLocaleString('pt-AO')} Kz</p>
-      <p>${disponivel ? `Stock disponível: ${prod.stock}` : 'Esgotado'}</p>
-      ${prod.descricao ? `<p>${escapeHtml(prod.descricao)}</p>` : ''}
-      <button class="btn-buy" ${disponivel ? '' : 'disabled'} onclick="adicionarAoCarrinho('${escapeHtml(prod.id)}')"><i class="fas fa-cart-plus"></i> ${disponivel ? 'Comprar' : 'Esgotado'}</button>
-    </div>`;
-  }).join('') : '<p style="padding:20px">Nenhum produto aprovado nesta categoria.</p>';
+    const imagem = prod.img ? `<img src="${escapeHtml(prod.img)}" alt="${escapeHtml(prod.nome)}" loading="lazy">` : '<div class="product-image-placeholder"><i class="fas fa-image"></i></div>';
+    return `<article class="product-card">${imagem}<h3 title="${escapeHtml(prod.nome)}">${escapeHtml(prod.nome)}</h3><p class="product-price">${Number(prod.preco).toLocaleString('pt-AO')} Kz</p><p class="${disponivel?'stock-ok':'stock-out'}">${disponivel ? `<i class="fas fa-circle-check"></i> ${prod.stock} em stock` : '<i class="fas fa-circle-xmark"></i> Esgotado'}</p>${prod.descricao ? `<p class="product-description">${escapeHtml(prod.descricao)}</p>` : '<p class="product-description"></p>'}<button class="btn-buy" ${disponivel?'':'disabled'} onclick="adicionarAoCarrinho('${escapeHtml(prod.id)}')"><i class="fas fa-cart-plus"></i> ${disponivel?'Adicionar ao carrinho':'Esgotado'}</button></article>`;
+  }).join('') : `<div class="empty-state"><i class="fas fa-box-open"></i><h3>Nenhum produto encontrado</h3><p>Tente outra pesquisa ou escolha uma categoria diferente.</p></div>`;
 }
 
-function filter(categoria) { categoriaAtual = categoria; renderizarLoja(); }
+function filter(categoria) {
+  categoriaAtual = categoria;
+  document.querySelectorAll('.categories button').forEach(btn => btn.classList.toggle('active', btn.dataset.category === categoria));
+  renderizarLoja();
+}
 window.filter = filter;
 
 function adicionarAoCarrinho(id) {
@@ -45,7 +48,7 @@ function adicionarAoCarrinho(id) {
   const quantidadeAtual = Number(existente?.quantidade) || 0;
   if (quantidadeAtual >= produto.stock) return alert(`Só existem ${produto.stock} unidades disponíveis.`);
   if (existente) existente.quantidade = quantidadeAtual + 1;
-  else carrinho.push({ ...produto, quantidade: 1 });
+  else carrinho.push({...produto, quantidade:1});
   localStorage.setItem('milomercios_cart', JSON.stringify(carrinho));
   atualizarContador();
   alert(`Sucesso! ${produto.nome} adicionado ao carrinho.`);
@@ -54,19 +57,20 @@ window.adicionarAoCarrinho = adicionarAoCarrinho;
 
 function atualizarContador() {
   const carrinho = JSON.parse(localStorage.getItem('milomercios_cart')) || [];
-  cartCount.innerText = carrinho.reduce((total, item) => total + (Number(item.quantidade) || 1), 0);
+  if (cartCount) cartCount.innerText = carrinho.reduce((total,item)=>total+(Number(item.quantidade)||1),0);
 }
 
 async function carregarProdutos() {
   try {
-    const snapshot = await getDocs(query(collection(db, 'produtos'), where('ativo', '==', true)));
-    produtos = snapshot.docs.map(doc => normalizarProduto(doc.id, doc.data())).filter(p => p.preco > 0 && p.vendedorId);
+    const snapshot = await getDocs(query(collection(db,'produtos'),where('ativo','==',true)));
+    produtos = snapshot.docs.map(doc=>normalizarProduto(doc.id,doc.data())).filter(p=>p.preco>0&&p.vendedorId);
     renderizarLoja();
-  } catch (error) {
+  } catch(error) {
     console.error(error);
-    app.innerHTML = '<p style="padding:20px">Não foi possível carregar os produtos. Tente novamente.</p>';
+    if (status) status.textContent = 'Erro ao carregar o catálogo';
+    app.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><h3>Não foi possível carregar os produtos</h3><p>Verifique a ligação e tente novamente.</p></div>';
   }
 }
 
-function escapeHtml(v) { return String(v ?? '').replace(/[&<>'\"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[c]); }
-window.addEventListener('load', () => { atualizarContador(); carregarProdutos(); });
+function escapeHtml(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]);}
+window.addEventListener('load',()=>{atualizarContador();if(searchInput)searchInput.addEventListener('input',()=>{pesquisaAtual=searchInput.value.trim();renderizarLoja();});if(sortSelect)sortSelect.addEventListener('change',renderizarLoja);carregarProdutos();});
