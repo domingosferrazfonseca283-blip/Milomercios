@@ -1,12 +1,58 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions/v2');
+const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { createClient } = require('@supabase/supabase-js');
 
 initializeApp();
 setGlobalOptions({ region: 'africa-south1', maxInstances: 10 });
 const db = getFirestore();
+const SUPABASE_SERVICE_ROLE_KEY = defineSecret('SUPABASE_SERVICE_ROLE_KEY');
+const SUPABASE_URL = 'https://bnrypbkenfvzvugilrfi.supabase.co';
+const ADMIN_EMAIL = 'domingosferrazfonseca283@gmail.com';
+const PROOF_BUCKET = 'milomercios';
+const IMAGE_BUCKET = 'milomercios-imagens';
+
 function cleanText(value, max = 500) { return String(value ?? '').trim().slice(0, max); }
+function getSupabase() { return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.value(), { auth: { persistSession: false, autoRefreshToken: false } }); }
+
+async function isAdmin(request) {
+  if (!request.auth?.token?.email_verified || request.auth.token.email !== ADMIN_EMAIL) return false;
+  const snap = await db.collection('usuarios').doc(request.auth.uid).get();
+  return snap.exists && snap.data().tipo === 'admin';
+}
+
+exports.criarUploadAssinado = onCall({ secrets: [SUPABASE_SERVICE_ROLE_KEY] }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Inicie sessão para enviar ficheiros.');
+  const data = request.data || {};
+  const bucket = cleanText(data.bucket, 80);
+  const path = cleanText(data.path, 500);
+  if (![PROOF_BUCKET, IMAGE_BUCKET].includes(bucket)) throw new HttpsError('invalid-argument', 'Bucket inválido.');
+  if (!path || path.includes('..') || path.startsWith('/')) throw new HttpsError('invalid-argument', 'Caminho inválido.');
+
+  const admin = await isAdmin(request);
+  if (!admin && !path.startsWith(`${request.auth.uid}/`) && !path.startsWith(`comprovativos/${request.auth.uid}/`) && !path.startsWith(`produtos/${request.auth.uid}/`)) {
+    throw new HttpsError('permission-denied', 'Não pode enviar este ficheiro.');
+  }
+  if (bucket === PROOF_BUCKET && !admin && !path.startsWith(`comprovativos/${request.auth.uid}/`)) throw new HttpsError('permission-denied', 'Caminho de comprovativo inválido.');
+  if (bucket === IMAGE_BUCKET && !admin && !path.startsWith(`produtos/${request.auth.uid}/`)) throw new HttpsError('permission-denied', 'Caminho de imagem inválido.');
+
+  const { data: signed, error } = await getSupabase().storage.from(bucket).createSignedUploadUrl(path);
+  if (error) throw new HttpsError('internal', 'Não foi possível preparar o envio: ' + error.message);
+  return { path, token: signed.token };
+});
+
+exports.obterUrlComprovativo = onCall({ secrets: [SUPABASE_SERVICE_ROLE_KEY] }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Inicie sessão.');
+  const path = cleanText(request.data?.path, 500);
+  if (!path || !path.startsWith('comprovativos/')) throw new HttpsError('invalid-argument', 'Comprovativo inválido.');
+  const admin = await isAdmin(request);
+  if (!admin && !path.startsWith(`comprovativos/${request.auth.uid}/`)) throw new HttpsError('permission-denied', 'Sem permissão para ver este comprovativo.');
+  const { data, error } = await getSupabase().storage.from(PROOF_BUCKET).createSignedUrl(path, 3600);
+  if (error) throw new HttpsError('not-found', 'Comprovativo não encontrado.');
+  return { url: data.signedUrl };
+});
 
 exports.criarEncomenda = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'É necessário iniciar sessão para comprar.');
