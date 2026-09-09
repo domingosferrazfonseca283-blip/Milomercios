@@ -1,22 +1,17 @@
-import { auth, db, functions } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
-import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js';
-import { supabase, SUPABASE_BUCKET, SUPABASE_IMAGES_BUCKET } from './supabase-config.js';
 
 const ADMIN_EMAIL = 'domingosferrazfonseca283@gmail.com';
-const MAX_PRODUCT_IMAGE = 8 * 1024 * 1024;
-const MAX_PROOF = 10 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE = 700 * 1024;
+const MAX_PROOF = 700 * 1024;
 const $ = id => document.getElementById(id);
 let user;
 let pedidoSubscricaoAtual = null;
 
 const money = v => `${Number(v || 0).toLocaleString('pt-AO')} Kz`;
 const esc = v => String(v ?? '').replace(/[&<>'\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const safeName = name => String(name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100);
 const lojaUrl = () => `loja.html?id=${encodeURIComponent(user.uid)}`;
-const criarUploadAssinado = httpsCallable(functions, 'criarUploadAssinado');
-const obterUrlComprovativo = httpsCallable(functions, 'obterUrlComprovativo');
 
 function formatData(value) {
   if (!value) return '';
@@ -24,11 +19,34 @@ function formatData(value) {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-AO');
 }
 
-async function uploadViaSupabase(bucket, path, file) {
-  const result = await criarUploadAssinado({ bucket, path });
-  const { error } = await supabase.storage.from(bucket).uploadToSignedUrl(path, result.data.token, file);
-  if (error) throw error;
-  return path;
+function readImage(file, maxBytes = 700 * 1024, maxDimension = 1400) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) return reject(new Error('Escolha uma imagem válida.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let quality = 0.82;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        while (dataUrl.length * 0.75 > maxBytes && quality > 0.35) {
+          quality -= 0.08;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        if (dataUrl.length * 0.75 > maxBytes) return reject(new Error('A imagem continua muito grande. Escolha uma imagem menor.'));
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Imagem inválida.'));
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 async function carregarPerfil() {
@@ -84,20 +102,15 @@ async function carregarSubscricao() {
 
   if (pedidoSubscricaoAtual) {
     const p = pedidoSubscricaoAtual;
-    const comprovativo = p.comprovativoPath
-      ? ` · <button type="button" class="btn-ver-comprovativo" data-path="${esc(p.comprovativoPath)}">Ver comprovativo</button>`
+    const comprovativo = p.comprovativoImagem
+      ? ` · <button type="button" class="btn-ver-comprovativo" data-image="${esc(p.comprovativoImagem)}">Ver comprovativo</button>`
       : '';
     $('sub-pagamento').innerHTML += `<br>Último pedido: <strong>${esc(p.estado || 'aguardando_pagamento')}</strong>${p.criadoEm ? ` · ${esc(formatData(p.criadoEm))}` : ''}${comprovativo}`;
     $('comprovativo-area').style.display = ['pago', 'rejeitado'].includes(p.estado) ? 'none' : 'block';
-    $('sub-pagamento').querySelector('.btn-ver-comprovativo')?.addEventListener('click', async e => {
-      const button = e.currentTarget;
-      button.disabled = true;
-      try {
-        const result = await obterUrlComprovativo({ path: button.dataset.path });
-        window.open(result.data.url, '_blank', 'noopener');
-      } catch (error) {
-        alert('Não foi possível abrir o comprovativo: ' + error.message);
-      } finally { button.disabled = false; }
+    $('sub-pagamento').querySelector('.btn-ver-comprovativo')?.addEventListener('click', e => {
+      const image = e.currentTarget.dataset.image;
+      const w = window.open('', '_blank', 'noopener');
+      if (w) w.document.write(`<title>Comprovativo</title><img src="${image}" style="max-width:100%;height:auto">`);
     });
   } else {
     $('comprovativo-area').style.display = 'none';
@@ -106,9 +119,9 @@ async function carregarSubscricao() {
 
 $('comprovativo')?.addEventListener('change', () => {
   const file = $('comprovativo').files?.[0];
-  const ok = file && file.size <= MAX_PROOF && (file.type.startsWith('image/') || file.type === 'application/pdf');
+  const ok = file && file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024;
   $('btn-comprovativo').disabled = !ok;
-  $('comprovativo-status').textContent = file && !ok ? 'Escolha uma imagem ou PDF com no máximo 10 MB.' : '';
+  $('comprovativo-status').textContent = file && !ok ? 'Escolha uma imagem de comprovativo. A imagem será comprimida automaticamente.' : '';
 });
 
 $('btn-pedir').onclick = async () => {
@@ -136,36 +149,37 @@ $('btn-pedir').onclick = async () => {
 $('btn-comprovativo')?.addEventListener('click', async () => {
   const file = $('comprovativo').files?.[0];
   if (!file) return alert('Selecione o comprovativo.');
-  if (file.size > MAX_PROOF) return alert('O comprovativo não pode ultrapassar 10 MB.');
-  if (!(file.type.startsWith('image/') || file.type === 'application/pdf')) return alert('Envie uma imagem ou PDF.');
+  if (!file.type.startsWith('image/')) return alert('Por enquanto, envie o comprovativo como imagem (JPG, PNG ou semelhante).');
   if (!pedidoSubscricaoAtual?.id) return alert('Primeiro solicite uma subscrição.');
   if (pedidoSubscricaoAtual.estado === 'pago') return alert('Este pedido já foi pago.');
 
   const btn = $('btn-comprovativo');
   btn.disabled = true;
   $('comprovativo-progresso').style.display = 'block';
-  $('barra-progresso').value = 0;
-  $('progresso-texto').textContent = 'A preparar...';
-  $('comprovativo-status').textContent = 'A enviar comprovativo...';
+  $('barra-progresso').value = 20;
+  $('progresso-texto').textContent = 'A comprimir...';
+  $('comprovativo-status').textContent = 'A preparar comprovativo...';
 
   try {
-    const path = `comprovativos/${user.uid}/${pedidoSubscricaoAtual.id}_${safeName(file.name)}`;
-    await uploadViaSupabase(SUPABASE_BUCKET, path, file);
-    $('barra-progresso').value = 100;
-    $('progresso-texto').textContent = '100%';
+    const comprovativoImagem = await readImage(file, MAX_PROOF, 1200);
+    $('barra-progresso').value = 80;
+    $('progresso-texto').textContent = 'A guardar...';
     await updateDoc(doc(db, 'pedidosSubscricao', pedidoSubscricaoAtual.id), {
-      comprovativoPath: path,
+      comprovativoImagem,
       comprovativoNome: file.name,
-      comprovativoTipo: file.type,
+      comprovativoTipo: 'image/jpeg',
       comprovativoEnviadoEm: serverTimestamp(),
       estado: 'comprovativo_enviado'
     });
+    pedidoSubscricaoAtual.comprovativoImagem = comprovativoImagem;
     pedidoSubscricaoAtual.estado = 'comprovativo_enviado';
+    $('barra-progresso').value = 100;
+    $('progresso-texto').textContent = '100%';
     $('comprovativo-status').textContent = 'Comprovativo enviado. Aguarde a confirmação do administrador.';
     await carregarSubscricao();
   } catch (e) {
     console.error(e);
-    $('comprovativo-status').textContent = 'Não foi possível enviar o comprovativo: ' + e.message;
+    $('comprovativo-status').textContent = 'Não foi possível guardar o comprovativo: ' + e.message;
   } finally { btn.disabled = false; }
 });
 
@@ -183,7 +197,7 @@ $('btn-produto').onclick = async () => {
   const descricao = $('produto-descricao').value.trim();
   const file = $('produto-imagem').files?.[0];
   if (!nome || preco <= 0 || !Number.isFinite(stock) || stock < 0) return alert('Informe nome, preço e stock válidos.');
-  if (file && (!file.type.startsWith('image/') || file.size > MAX_PRODUCT_IMAGE)) return alert('A imagem deve ser válida e ter no máximo 8 MB.');
+  if (file && !file.type.startsWith('image/')) return alert('A imagem do produto deve ser válida.');
 
   const btn = $('btn-produto');
   btn.disabled = true;
@@ -196,13 +210,11 @@ $('btn-produto').onclick = async () => {
 
     if (file) {
       $('produto-progresso').style.display = 'block';
-      $('produto-barra').value = 0;
-      $('produto-progresso-texto').textContent = 'A preparar...';
-      $('produto-status').textContent = 'A enviar imagem...';
-      const path = `produtos/${user.uid}/${produtoRef.id}/${safeName(file.name)}`;
-      await uploadViaSupabase(SUPABASE_IMAGES_BUCKET, path, file);
-      const { data } = supabase.storage.from(SUPABASE_IMAGES_BUCKET).getPublicUrl(path);
-      await updateDoc(produtoRef, { imagemUrl: data.publicUrl, imagemPath: path, atualizadoEm: serverTimestamp() });
+      $('produto-barra').value = 30;
+      $('produto-progresso-texto').textContent = 'A comprimir imagem...';
+      $('produto-status').textContent = 'A preparar imagem...';
+      const imagemUrl = await readImage(file, MAX_PRODUCT_IMAGE, 1400);
+      await updateDoc(produtoRef, { imagemUrl, atualizadoEm: serverTimestamp() });
       $('produto-barra').value = 100;
       $('produto-progresso-texto').textContent = '100%';
     }
