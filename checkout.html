@@ -1,1 +1,25 @@
-<!DOCTYPE html><html lang="pt-AO"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Checkout | Milomércios</title><link rel="stylesheet" href="Style.css"></head><body><header><div class="logo">Milomércios</div><a href="carrinho.html" style="color:white">Carrinho</a></header><main id="checkout-app" style="max-width:1000px;margin:25px auto;padding:0 15px"><div class="loader">A carregar checkout...</div></main><script type="module" src="checkout.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Finalize a sua encomenda no Milomércios.">
+  <title>Checkout | Milomércios</title>
+  <link rel="stylesheet" href="Style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="brand-mark"><i class="fas fa-store"></i></span><span>Milomércios</span></a>
+  <nav class="main-nav"><a href="carrinho.html"><i class="fas fa-shopping-cart"></i> Carrinho</a></nav>
+</header>
+<main class="checkout-page">
+  <p class="section-kicker">Finalização segura</p>
+  <h1>Finalizar encomenda</h1>
+  <p class="page-subtitle">Preencha os seus dados. A encomenda e o stock são validados no servidor.</p>
+  <div id="checkout-app"><div class="card loader"><i class="fas fa-spinner fa-spin"></i> A carregar checkout...</div></div>
+</main>
+<footer class="site-footer"><div><strong>Milomércios</strong><span>Marketplace angolano para comprar e vender.</span></div><div class="footer-links"><a href="index.html">Início</a><a href="carrinho.html">Carrinho</a></div></footer>
+<script type="module" src="checkout.js"></script>
+</body>
+</html>
