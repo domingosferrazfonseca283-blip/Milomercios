@@ -185,5 +185,144 @@ end; $$;
 drop trigger if exists reviews_rating on public.reviews;
 create trigger reviews_rating after insert or update or delete on public.reviews for each row execute function public.refresh_product_rating();
 
+-- Checkout seguro: preço, stock e total são calculados no servidor.
+create or replace function public.criar_encomenda_segura(
+  p_customer jsonb,
+  p_payment_method text,
+  p_items jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_cliente uuid := auth.uid();
+  v_item jsonb;
+  v_id uuid;
+  v_qtd integer;
+  v_product public.products%rowtype;
+  v_total numeric(14,2) := 0;
+  v_items jsonb := '[]'::jsonb;
+  v_seller_ids uuid[] := '{}';
+  v_order_id uuid;
+  v_existing_qty integer;
+begin
+  if v_cliente is null then
+    raise exception 'Utilizador não autenticado';
+  end if;
+
+  if p_customer is null or jsonb_typeof(p_customer) <> 'object' then
+    raise exception 'Dados do cliente inválidos';
+  end if;
+
+  if coalesce(trim(p_customer->>'nome'), '') = ''
+     or coalesce(trim(p_customer->>'telefone'), '') = ''
+     or coalesce(trim(p_customer->>'morada'), '') = '' then
+    raise exception 'Nome, telefone e morada são obrigatórios';
+  end if;
+
+  if p_payment_method not in ('transferencia', 'multicaixa', 'entrega') then
+    raise exception 'Método de pagamento inválido';
+  end if;
+
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'O carrinho está vazio';
+  end if;
+
+  for v_item in select value from jsonb_array_elements(p_items)
+  loop
+    begin
+      v_id := (v_item->>'id')::uuid;
+      v_qtd := (v_item->>'quantidade')::integer;
+    exception when others then
+      raise exception 'Produto ou quantidade inválida';
+    end;
+
+    if v_qtd is null or v_qtd < 1 or v_qtd > 10000 then
+      raise exception 'Quantidade inválida para o produto %', v_id;
+    end if;
+
+    select * into v_product
+    from public.products
+    where id = v_id and ativo = true
+    for update;
+
+    if not found then
+      raise exception 'Produto % não está disponível', v_id;
+    end if;
+
+    if v_product.stock < v_qtd then
+      raise exception 'Stock insuficiente para % (disponível: %)', v_product.nome, v_product.stock;
+    end if;
+
+    v_existing_qty := coalesce((
+      select sum((x->>'quantidade')::integer)
+      from jsonb_array_elements(v_items) x
+      where (x->>'id')::uuid = v_product.id
+    ), 0);
+
+    if v_existing_qty = 0 then
+      v_items := v_items || jsonb_build_array(jsonb_build_object(
+        'id', v_product.id,
+        'nome', v_product.nome,
+        'preco', v_product.preco,
+        'quantidade', v_qtd,
+        'categoria', v_product.categoria,
+        'imagem_url', v_product.imagem_url,
+        'vendedor_id', v_product.vendedor_id
+      ));
+      v_total := v_total + (v_product.preco * v_qtd);
+    else
+      v_items := (
+        select jsonb_agg(
+          case when (x->>'id')::uuid = v_product.id
+            then jsonb_set(x, '{quantidade}', to_jsonb((x->>'quantidade')::integer + v_qtd))
+            else x
+          end
+        )
+        from jsonb_array_elements(v_items) x
+      );
+      v_total := v_total + (v_product.preco * v_qtd);
+    end if;
+
+    update public.products
+    set stock = stock - v_qtd,
+        atualizado_em = now()
+    where id = v_product.id;
+
+    if not v_product.vendedor_id = any(v_seller_ids) then
+      v_seller_ids := array_append(v_seller_ids, v_product.vendedor_id);
+    end if;
+  end loop;
+
+  insert into public.orders (
+    cliente_id, customer, items, total, payment_method,
+    payment_status, order_status, seller_ids
+  ) values (
+    v_cliente,
+    p_customer,
+    v_items,
+    v_total,
+    p_payment_method,
+    'aguardando_pagamento',
+    'aguardando_pagamento',
+    v_seller_ids
+  )
+  returning id into v_order_id;
+
+  return jsonb_build_object(
+    'orderId', v_order_id,
+    'total', v_total,
+    'items', v_items,
+    'sellerIds', to_jsonb(v_seller_ids)
+  );
+end;
+$$;
+
+revoke execute on function public.criar_encomenda_segura(jsonb, text, jsonb) from public;
+revoke execute on function public.criar_encomenda_segura(jsonb, text, jsonb) from anon;
+grant execute on function public.criar_encomenda_segura(jsonb, text, jsonb) to authenticated;
+
 -- Depois de criar o primeiro utilizador administrador no Supabase Auth, execute:
 -- update public.profiles set tipo='admin', estado_conta='ativo', email='domingosferrazfonseca283@gmail.com' where lower(email)='domingosferrazfonseca283@gmail.com';
