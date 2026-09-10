@@ -17,7 +17,7 @@ async function init() {
   document.getElementById('account-email').textContent = user.email || 'Conta Milomércios';
   const { data, error } = await supabase.from('orders').select('*').eq('cliente_id', user.id).order('criado_em', { ascending: false });
   if (error) {
-    document.getElementById('orders-list').innerHTML = `<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>Não foi possível carregar as encomendas agora.</p></div>`;
+    document.getElementById('orders-list').innerHTML = '<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>Não foi possível carregar as encomendas agora.</p></div>';
     return;
   }
 
@@ -34,7 +34,8 @@ async function init() {
     const total = Number(order.total || order.valor_total || 0);
     const status = order.estado || order.status || 'pendente';
     const date = order.criado_em ? new Date(order.criado_em).toLocaleDateString('pt-AO', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-    return `<article class="order-card"><div><span class="order-id">#${escapeHtml(order.id || order.numero || '—')}</span><strong>${money(total)}</strong><small>${date}</small></div><span class="${statusClass(status)}">${escapeHtml(statusLabel(status))}</span></article>`;
+    const ref = order.numero || order.id || '—';
+    return `<article class="order-card"><div><span class="order-id">#${escapeHtml(ref)}</span><strong>${money(total)}</strong><small>${date}</small></div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="${statusClass(status)}">${escapeHtml(statusLabel(status))}</span><a class="btn btn-small" href="encomenda.html?id=${encodeURIComponent(order.id)}">Acompanhar</a></div></article>`;
   }).join('');
 }
 
