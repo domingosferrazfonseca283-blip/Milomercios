@@ -1,1 +1,37 @@
-<!DOCTYPE html><html lang="pt-AO"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Carrinho | Milomércios</title><link rel="stylesheet" href="Style.css"></head><body><header><div class="logo">Milomércios</div><a href="index.html" style="color:white">Continuar a comprar</a></header><main class="card" style="max-width:900px;margin:25px auto"><h2>Seu carrinho</h2><div id="cart-list"></div><h3 style="margin-top:20px">Total: <span id="cart-total">0</span> Kz</h3><a class="btn" href="checkout.html">Ir para checkout</a><button class="btn" onclick="limparCarrinho()">Limpar carrinho</button></main><script type="module" src="cart.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Revise os seus produtos antes de finalizar a compra no Milomércios.">
+  <title>Carrinho | Milomércios</title>
+  <link rel="stylesheet" href="Style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="brand-mark"><i class="fas fa-store"></i></span><span>Milomércios</span></a>
+  <nav class="main-nav"><a href="index.html"><i class="fas fa-arrow-left"></i> Continuar a comprar</a></nav>
+</header>
+<main class="cart-page">
+  <p class="section-kicker">A sua compra</p>
+  <h1>O seu carrinho</h1>
+  <p class="page-subtitle">Confira os produtos, ajuste as quantidades e avance quando estiver pronto.</p>
+  <div class="cart-shell">
+    <section class="card">
+      <div id="cart-list"></div>
+    </section>
+    <aside class="card cart-summary">
+      <p class="section-kicker">Resumo</p>
+      <h2>Total da compra</h2>
+      <div class="total"><span>Total</span><span id="cart-total">0 Kz</span></div>
+      <p class="checkout-note"><i class="fas fa-shield-halved"></i> O preço e o stock serão confirmados no servidor no checkout.</p>
+      <a class="btn" href="checkout.html"><i class="fas fa-lock"></i> Ir para checkout</a>
+      <div class="cart-actions"><button class="btn" type="button" onclick="limparCarrinho()"><i class="fas fa-trash"></i> Limpar carrinho</button></div>
+    </aside>
+  </div>
+</main>
+<footer class="site-footer"><div><strong>Milomércios</strong><span>Marketplace angolano para comprar e vender.</span></div><div class="footer-links"><a href="index.html">Início</a><a href="registo.html">Vender</a><a href="carrinho.html">Carrinho</a></div></footer>
+<script type="module" src="cart.js"></script>
+</body>
+</html>
