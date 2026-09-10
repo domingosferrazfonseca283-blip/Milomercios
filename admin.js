@@ -6,7 +6,8 @@ const esc = v => String(v ?? '').replace(/[&<>'\"]/g, c => ({'&':'&amp;','<':'&l
 const money = v => `${Number(v || 0).toLocaleString('pt-AO')} Kz`;
 const date = v => { const d = new Date(v); return v && !Number.isNaN(d.getTime()) ? d.toLocaleString('pt-AO') : '—'; };
 const statusLabel = v => ({pendente:'Pendente',confirmada:'Confirmada',em_preparacao:'Em preparação',enviada:'Enviada',entregue:'Entregue',cancelada:'Cancelada',rascunho:'Rascunho',ativo:'Ativo',bloqueado:'Bloqueado',aprovado:'Aprovado',rejeitado:'Rejeitado',oculto:'Oculto',pago:'Pago',comprovativo_enviado:'Comprovativo enviado',aguardando_pagamento:'Aguardando pagamento'}[v] || v || '—');
-let cache = { vendedores: [], produtos: [], pedidos: [], campanhas: [] };
+const orderStatuses = ['pendente','confirmada','em_preparacao','enviada','entregue','cancelada'];
+let cache = { vendedores: [], produtos: [], pedidos: [], campanhas: [], subscricoes: [] };
 
 async function requireAdmin() {
   const user = await currentUser();
@@ -47,8 +48,8 @@ async function carregarProdutos() {
 
 async function carregarSubscricoes() {
   const { data, error } = await supabase.from('subscription_requests').select('*').order('criado_em',{ascending:false});
-  if (error) throw error;
-  const rows = data || []; const pending = rows.filter(p => !['pago','rejeitado'].includes(p.estado));
+  if (error) throw error; cache.subscricoes = data || [];
+  const rows = cache.subscricoes; const pending = rows.filter(p => !['pago','rejeitado'].includes(p.estado));
   $('subscricoes-list').innerHTML = rows.map(p => { const estado=p.estado||'aguardando_pagamento'; return `<article class="admin-item"><div class="admin-item-main"><h3>${esc(p.email||p.vendedor_id||'Vendedor')}</h3><div class="meta">Plano ${esc(p.plano||'mensal')} · ${money(p.valor)}<br>Estado: <span class="badge ${estado==='pago'?'good':estado==='rejeitado'?'bad':'pending'}">${esc(statusLabel(estado))}</span> · ${esc(date(p.criado_em))}${p.comprovativo_enviado_em?' · Enviado '+esc(date(p.comprovativo_enviado_em)):''}${p.comprovativo_imagem?`<br><a href="${esc(p.comprovativo_imagem)}" target="_blank" rel="noopener">Abrir comprovativo</a>`:'<br>Sem comprovativo'}</div></div><div class="admin-buttons">${estado==='pago'?'<strong>Confirmado</strong>':`<button class="btn-ok" onclick="pagar('${esc(p.id)}','${esc(p.vendedor_id)}','${esc(p.plano||'mensal')}')">Confirmar pagamento</button><button class="btn-no" onclick="rejeitar('${esc(p.id)}')">Rejeitar</button>`}</div></article>`; }).join('') || '<div class="empty">Nenhum pedido de subscrição.</div>';
   return pending.length;
 }
@@ -58,7 +59,9 @@ async function carregarPedidos() {
   if (error) throw error; cache.pedidos=data||[];
   const term=($('filter-encomenda')?.value||'').toLowerCase(); const estado=$('filter-encomenda-estado')?.value||'';
   const rows=cache.pedidos.filter(p => (!estado || (p.estado||p.status||'pendente')===estado) && (!term || JSON.stringify(p).toLowerCase().includes(term)));
-  $('encomendas-admin-list').innerHTML=rows.map(p=>{const st=p.estado||p.status||'pendente'; return `<article class="admin-item"><div class="admin-item-main"><h3>Encomenda #${esc(p.id)}</h3><div class="meta">Cliente: ${esc(p.customer?.nome||p.customer?.name||p.cliente_id||'—')}<br>Total: ${money(p.total||p.valor_total)} · <span class="badge ${st==='entregue'?'good':st==='cancelada'?'bad':'pending'}">${esc(statusLabel(st))}</span><br>${esc(date(p.criado_em))}</div></div><div class="admin-buttons"><a class="btn-neutral" style="padding:9px 11px;border-radius:9px;text-decoration:none" href="encomenda.html?id=${encodeURIComponent(p.id)}">Acompanhar</a></div></article>`;}).join('')||'<div class="empty">Nenhuma encomenda encontrada.</div>';
+  const total = cache.pedidos.reduce((n,p)=>n+Number(p.total||p.valor_total||0),0);
+  if ($('kpi-volume')) $('kpi-volume').textContent=money(total);
+  $('encomendas-admin-list').innerHTML=rows.map(p=>{const st=p.estado||p.status||'pendente'; const safeId=esc(p.id); return `<article class="admin-item"><div class="admin-item-main"><h3>Encomenda #${safeId}</h3><div class="meta">Cliente: ${esc(p.customer?.nome||p.customer?.name||p.cliente_id||'—')}<br>Total: <span class="order-total">${money(p.total||p.valor_total)}</span> · <span class="badge ${st==='entregue'?'good':st==='cancelada'?'bad':'pending'}">${esc(statusLabel(st))}</span><br>${esc(date(p.criado_em))}</div></div><div class="admin-buttons"><select aria-label="Estado da encomenda #${safeId}" id="estado-${safeId}">${orderStatuses.map(s=>`<option value="${s}" ${s===st?'selected':''}>${statusLabel(s)}</option>`).join('')}</select><button class="btn-ok" onclick="estadoEncomenda('${safeId}')">Guardar estado</button><a class="btn-neutral" style="padding:9px 11px;border-radius:9px;text-decoration:none" href="encomenda.html?id=${encodeURIComponent(p.id)}">Acompanhar</a></div></article>`;}).join('')||'<div class="empty">Nenhuma encomenda encontrada.</div>';
   $('kpi-encomendas').textContent=cache.pedidos.length;
 }
 
@@ -74,8 +77,10 @@ async function refresh() {
   const admin=await requireAdmin(); if(!admin) return;
   const results=await Promise.allSettled([carregarVendedores(),carregarProdutos(),carregarSubscricoes(),carregarPedidos(),carregarCampanhas()]);
   const failed=results.filter(r=>r.status==='rejected');
-  const pending = cache.vendedores.filter(v=>v.estado_conta!=='ativo').length + cache.produtos.filter(p=>!p.ativo).length;
-  $('kpi-pendentes').textContent=pending;
+  const pendingVendedores=cache.vendedores.filter(v=>v.estado_conta!=='ativo').length;
+  const pendingProdutos=cache.produtos.filter(p=>!p.ativo).length;
+  const pendingSubscricoes=cache.subscricoes.filter(p=>!['pago','rejeitado'].includes(p.estado)).length;
+  $('kpi-pendentes').textContent=pendingVendedores+pendingProdutos+pendingSubscricoes;
   const alert=$('admin-alert'); if(failed.length){alert.style.display='block';alert.textContent=`Algumas áreas não puderam ser carregadas (${failed.length}). Verifique as tabelas/RLS do Supabase.`;}else{alert.style.display='none';}
 }
 
@@ -85,6 +90,7 @@ window.produto=async(id,ativo)=>{if(await adminWrite('products',{ativo:!ativo,es
 window.rejeitarProduto=async id=>{if(!confirm('Rejeitar este produto?'))return;if(await adminWrite('products',{ativo:false,estado_aprovacao:'rejeitado',atualizado_em:new Date().toISOString()},'id',id))refresh();};
 window.pagar=async(id,vendedor,plano)=>{const d=new Date();plano==='semanal'?d.setDate(d.getDate()+7):d.setMonth(d.getMonth()+1);if(!await adminWrite('subscription_requests',{estado:'pago',pago_em:new Date().toISOString(),aprovado_por:ADMIN_EMAIL},'id',id))return;if(!await adminWrite('profiles',{subscricao_ativa:true,plano_subscricao:plano,proxima_cobranca_em:d.toISOString(),estado_conta:'ativo',atualizado_em:new Date().toISOString()},'id',vendedor))return;alert('Pagamento confirmado e vendedor ativado.');refresh();};
 window.rejeitar=async id=>{if(!confirm('Rejeitar este pedido?'))return;if(await adminWrite('subscription_requests',{estado:'rejeitado',rejeitado_em:new Date().toISOString(),rejeitado_por:ADMIN_EMAIL},'id',id))refresh();};
+window.estadoEncomenda=async id=>{const select=$(`estado-${id}`); const estado=select?.value; if(!orderStatuses.includes(estado)){alert('Estado inválido.');return;} if(!confirm(`Alterar a encomenda #${id} para “${statusLabel(estado)}”?`))return; if(await adminWrite('orders',{estado,status:estado,atualizado_em:new Date().toISOString()},'id',id)){alert('Estado da encomenda atualizado.');refresh();}};
 
 $('btn-admin-refresh')?.addEventListener('click',refresh); $('btn-admin-logout')?.addEventListener('click',async()=>{await signOut();location.href='login.html';});
 ['filter-vendedor','filter-vendedor-estado','filter-vendedor-sub','filter-produto','filter-produto-estado','filter-encomenda','filter-encomenda-estado'].forEach(id=>$(id)?.addEventListener('input',()=>{ if(id.startsWith('filter-vendedor')) carregarVendedores(); else if(id.startsWith('filter-produto')) carregarProdutos(); else carregarPedidos(); }));
