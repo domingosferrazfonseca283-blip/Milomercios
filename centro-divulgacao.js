@@ -18,9 +18,21 @@ function sugerir(produto) {
     alimentos: ['Pessoas interessadas em alimentação e produtos locais', ['Instagram', 'Facebook', 'WhatsApp']]
   };
   const [publico, canais] = mapa[categoria] || ['Pessoas que procuram produtos semelhantes e boas oportunidades de compra', ['Facebook', 'Instagram', 'WhatsApp']];
-  const titulo = `${nome}: uma escolha que vale a pena conhecer`;
-  const texto = `Conheça ${nome}, disponível na Milomércios por ${preco}. Descubra os detalhes, veja a disponibilidade e fale diretamente com o vendedor. Uma oportunidade para quem procura qualidade e praticidade.`;
-  return { publico, canais, titulo, texto, chamada: 'Ver produto e comprar' };
+  return {
+    publico,
+    canais,
+    titulo: `${nome}: uma escolha que vale a pena conhecer`,
+    texto: `Conheça ${nome}, disponível na Milomércios por ${preco}. Descubra os detalhes, veja a disponibilidade e fale diretamente com o vendedor. Uma oportunidade para quem procura qualidade e praticidade.`,
+    chamada: 'Ver produto e comprar'
+  };
+}
+
+function linkRastreio(campaignId, productId, channel) {
+  const url = new URL('rastreio.html', location.href);
+  url.searchParams.set('c', campaignId);
+  url.searchParams.set('p', productId);
+  url.searchParams.set('src', channel.toLowerCase());
+  return url.href;
 }
 
 async function carregar() {
@@ -53,10 +65,9 @@ function renderPreview(c) {
 $('btn-gerar').onclick = () => {
   const produto = products.find(p => String(p.id) === String($('produto-campanha').value));
   if (!produto) return;
-  const c = sugerir(produto);
-  renderPreview(c);
+  renderPreview(sugerir(produto));
   $('campanha-nome').value = `Divulgação — ${produto.nome}`;
-  $('estado-campanha').textContent = 'Sugestão criada. Reveja o conteúdo antes de guardar ou publicar.';
+  $('estado-campanha').textContent = 'Sugestão criada. Reveja o conteúdo antes de guardar.';
 };
 
 $('btn-guardar-campanha').onclick = async () => {
@@ -64,7 +75,7 @@ $('btn-guardar-campanha').onclick = async () => {
   if (!produto || !$('preview-titulo').textContent) return alert('Gere primeiro uma campanha.');
   const btn = $('btn-guardar-campanha'); btn.disabled = true;
   try {
-    const { error } = await supabase.from('campaigns').insert({
+    const { data, error } = await supabase.from('campaigns').insert({
       vendedor_id: user.id,
       produto_id: produto.id,
       nome: $('campanha-nome').value.trim() || `Divulgação — ${produto.nome}`,
@@ -75,20 +86,30 @@ $('btn-guardar-campanha').onclick = async () => {
       texto: $('preview-texto').textContent,
       chamada: $('preview-cta').textContent,
       estado: 'rascunho'
-    });
+    }).select('id').single();
     if (error) throw error;
-    $('estado-campanha').textContent = 'Campanha guardada como rascunho.';
+
+    const campaignId = data.id;
+    const links = (await Promise.resolve($('preview-canais').textContent.split(' · ').filter(Boolean)))
+      .map(channel => `${channel}: ${linkRastreio(campaignId, produto.id, channel)}`)
+      .join('\n');
+    $('estado-campanha').innerHTML = `<strong>Campanha guardada.</strong><br>Links rastreáveis por canal:<br><textarea readonly rows="4" style="width:100%;margin-top:8px">${esc(links)}</textarea>`;
     await carregarCampanhas();
   } catch (e) {
     console.error(e);
-    alert('Não foi possível guardar a campanha. Verifique se a migração campaigns foi executada no Supabase.');
+    alert('Não foi possível guardar a campanha. Execute a migração de tracking no Supabase.');
   } finally { btn.disabled = false; }
 };
 
 async function carregarCampanhas() {
   const { data, error } = await supabase.from('campaigns').select('id,nome,estado,cliques,conversoes,criado_em').eq('vendedor_id', user.id).order('criado_em', { ascending: false });
   if (error) { $('campanhas-lista').innerHTML = '<p>Execute a migração do Centro de Divulgação no Supabase para ativar o histórico.</p>'; return; }
-  $('campanhas-lista').innerHTML = (data || []).map(c => `<div class="campaign-row"><strong>${esc(c.nome)}</strong><span>${esc(c.estado)} · ${Number(c.cliques || 0)} cliques · ${Number(c.conversoes || 0)} vendas</span></div>`).join('') || '<p>Ainda não existem campanhas.</p>';
+  $('campanhas-lista').innerHTML = (data || []).map(c => {
+    const cliques = Number(c.cliques || 0);
+    const conversoes = Number(c.conversoes || 0);
+    const taxa = cliques ? ((conversoes / cliques) * 100).toFixed(1) : '0.0';
+    return `<div class="campaign-row"><strong>${esc(c.nome)}</strong><span>${esc(c.estado)} · ${cliques} cliques · ${conversoes} vendas · ${taxa}% conversão</span></div>`;
+  }).join('') || '<p>Ainda não existem campanhas.</p>';
 }
 
 carregar().catch(e => { console.error(e); $('estado-campanha').textContent = 'Não foi possível carregar o Centro de Divulgação.'; });

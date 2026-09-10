@@ -4,6 +4,7 @@ import { currentUser } from './supabase-auth.js';
 const app = document.getElementById('checkout-app');
 const cartKey = 'milomercios_cart';
 const orderKey = 'milomercios_order';
+const attributionKey = 'milomercios_attribution';
 let itensCarrinho = carregarCarrinho();
 let utilizador = null;
 
@@ -38,6 +39,33 @@ function escapeHtml(value) {
     "'": '&#39;',
     '"': '&quot;'
   })[char]);
+}
+
+function getAttribution() {
+  try {
+    const value = JSON.parse(localStorage.getItem(attributionKey) || 'null');
+    return value?.campaignId && value?.sessionId ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+async function registarConversao() {
+  const attribution = getAttribution();
+  if (!attribution || !utilizador) return;
+
+  const conversionKey = `milomercios_conversion_${attribution.campaignId}_${attribution.sessionId}`;
+  if (localStorage.getItem(conversionKey)) return;
+
+  const { error } = await supabase.rpc('registar_conversao_campanha', {
+    p_campaign_id: attribution.campaignId,
+    p_session_id: attribution.sessionId
+  });
+  if (error) {
+    console.warn('Conversão de campanha não registada:', error.message);
+    return;
+  }
+  localStorage.setItem(conversionKey, '1');
 }
 
 function render() {
@@ -91,6 +119,8 @@ async function submitOrder(event) {
       criadoEm: new Date().toISOString()
     };
 
+    // Só contamos a conversão depois de a encomenda segura ser aceite pelo servidor.
+    await registarConversao();
     localStorage.setItem(orderKey, JSON.stringify(order));
     localStorage.removeItem(cartKey);
     renderConfirmation(order);
