@@ -1,5 +1,4 @@
-import { db } from './firebase-config.js';
-import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { supabase } from './supabase-config.js';
 
 let produtos = [];
 const app = document.getElementById('app');
@@ -10,8 +9,17 @@ const sortSelect = document.getElementById('sort-select');
 let categoriaAtual = 'todos';
 let pesquisaAtual = '';
 
-function normalizarProduto(id, data) {
-  return { id, nome:data.nome||'Produto sem nome', preco:Number(data.preco||0), stock:Math.max(0,Math.floor(Number(data.stock)||0)), categoria:String(data.categoria||'outros').toLowerCase(), descricao:data.descricao||'', img:data.img||data.imagemUrl||'', vendedorId:data.vendedorId||'' };
+function normalizarProduto(data) {
+  return {
+    id: data.id,
+    nome: data.nome || 'Produto sem nome',
+    preco: Number(data.preco || 0),
+    stock: Math.max(0, Math.floor(Number(data.stock) || 0)),
+    categoria: String(data.categoria || 'outros').toLowerCase(),
+    descricao: data.descricao || '',
+    img: data.imagem_url || '',
+    vendedorId: data.vendedor_id || ''
+  };
 }
 
 function renderizarLoja() {
@@ -62,8 +70,14 @@ function atualizarContador() {
 
 async function carregarProdutos() {
   try {
-    const snapshot = await getDocs(query(collection(db,'produtos'),where('ativo','==',true)));
-    produtos = snapshot.docs.map(doc=>normalizarProduto(doc.id,doc.data())).filter(p=>p.preco>0&&p.vendedorId);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,nome,preco,stock,categoria,descricao,imagem_url,vendedor_id')
+      .eq('ativo', true)
+      .gt('preco', 0)
+      .gt('stock', 0);
+    if (error) throw error;
+    produtos = (data || []).map(normalizarProduto).filter(p => p.vendedorId);
     renderizarLoja();
   } catch(error) {
     console.error(error);
