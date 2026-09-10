@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Detalhes da encomenda | Milomércios</title>
+  <link rel="stylesheet" href="Style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .order-wrap{max-width:980px;margin:30px auto 60px;padding:0 18px}.order-hero{background:linear-gradient(135deg,#142f46,#245a78);color:#fff;border-radius:22px;padding:28px;margin-bottom:18px}.order-hero h1{margin:5px 0;font-size:2rem}.order-hero p{color:#dce8ef}.order-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.order-actions a{background:#fff;color:var(--primaria);padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:800}.order-card{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:var(--sombra)}.order-card h2{color:var(--primaria);margin-top:0}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.summary-item{background:#f7f9fb;border:1px solid var(--linha);border-radius:12px;padding:14px}.summary-item span{display:block;color:var(--muted);font-size:.78rem}.summary-item strong{display:block;margin-top:5px;color:var(--primaria)}.item-row{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--linha)}.item-row:last-child{border-bottom:0}.item-row img{width:64px;height:64px;object-fit:cover;border-radius:10px;background:#f2f4f6}.item-name{font-weight:800;color:var(--primaria)}.item-meta{font-size:.85rem;color:var(--muted);margin-top:4px}.item-price{font-weight:850}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.info-box{background:#f7f9fb;border:1px solid var(--linha);border-radius:12px;padding:14px}.info-box span{display:block;color:var(--muted);font-size:.76rem;margin-bottom:4px}.info-box strong{color:var(--primaria);word-break:break-word}.status-badge{display:inline-flex;padding:7px 11px;border-radius:999px;background:#eef4f7;color:var(--primaria);font-weight:850}.error{padding:20px;text-align:center}.loading{text-align:center;padding:30px;color:var(--muted)}
+    @media(max-width:650px){.order-wrap{padding:0 12px;margin-top:15px}.order-hero{padding:21px;border-radius:17px}.order-hero h1{font-size:1.55rem}.summary-grid,.info-grid{grid-template-columns:1fr}.item-row{grid-template-columns:52px 1fr}.item-row img{width:52px;height:52px}.item-price{grid-column:2}.order-card{padding:16px}}
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="vendedor.html"><span class="brand-mark"><i class="fas fa-store"></i></span><span>Milomércios</span></a>
+  <nav class="main-nav"><a href="vendedor.html"><i class="fas fa-arrow-left"></i> Voltar ao painel</a></nav>
+</header>
+<main class="order-wrap" id="app"><div class="loading"><i class="fas fa-spinner fa-spin"></i> A carregar encomenda...</div></main>
+<script type="module" src="vendedor-encomenda.js"></script>
+</body>
+</html>
