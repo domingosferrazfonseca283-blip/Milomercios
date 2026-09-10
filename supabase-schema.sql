@@ -163,6 +163,7 @@ create policy requests_admin_delete on public.subscription_requests for delete u
 create policy orders_customer_insert on public.orders for insert with check (cliente_id = auth.uid());
 create policy orders_read on public.orders for select using (cliente_id = auth.uid() or public.is_admin() or public.is_active_seller());
 create policy orders_customer_update on public.orders for update using (cliente_id = auth.uid()) with check (cliente_id = auth.uid());
+create policy orders_seller_update on public.orders for update using (public.is_active_seller() and auth.uid() = any(seller_ids)) with check (public.is_active_seller() and auth.uid() = any(seller_ids));
 create policy orders_admin_update on public.orders for update using (public.is_admin()) with check (public.is_admin());
 
 create policy reviews_public_read on public.reviews for select using (true);
