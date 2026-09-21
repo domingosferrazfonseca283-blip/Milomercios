@@ -162,4 +162,69 @@ window.rejeitar = async id => {
   alert('Pedido rejeitado.');
 };
 
+
+async function configurarCursoPython() {
+  const { data: existente, error: buscaError } = await supabase.from('products').select('*').eq('tipo_produto','digital_curso').maybeSingle();
+  if (buscaError) throw buscaError;
+  const payload = {
+    nome: 'Python do Zero ao Avançado — 160 Aulas',
+    preco: 100,
+    stock: 999999,
+    categoria: 'curso',
+    descricao: 'Curso em português com 160 aulas práticas, do zero ao avançado.',
+    imagem_url: '',
+    ativo: true,
+    estado_aprovacao: 'aprovado',
+    tipo_produto: 'digital_curso',
+    atualizado_em: new Date().toISOString()
+  };
+  if (existente) {
+    const { error } = await supabase.from('products').update(payload).eq('id', existente.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('products').insert({ ...payload, vendedor_id: (await currentUser()).id });
+    if (error) throw error;
+  }
+  $('curso-status').textContent = 'Produto do curso configurado por 100 Kz.';
+  await carregarProdutos();
+}
+
+$('btn-curso-config')?.addEventListener('click', async () => {
+  try { await configurarCursoPython(); }
+  catch (e) { $('curso-status').textContent = 'Erro ao configurar o curso: ' + e.message; }
+});
+
+$('curso-arquivo')?.addEventListener('change', () => {
+  const file = $('curso-arquivo').files?.[0];
+  $('btn-curso-upload').disabled = !(file && file.name.toLowerCase().endsWith('.epub'));
+});
+
+$('btn-curso-upload')?.addEventListener('click', async () => {
+  const file = $('curso-arquivo').files?.[0];
+  if (!file || !file.name.toLowerCase().endsWith('.epub')) return alert('Selecione o ficheiro EPUB.');
+  const btn = $('btn-curso-upload');
+  btn.disabled = true;
+  $('curso-status').textContent = 'A enviar o EPUB para armazenamento privado...';
+  try {
+    const { error } = await supabase.storage.from('ebooks').upload('curso-python-160-aulas.epub', file, {
+      cacheControl: '3600', upsert: true, contentType: 'application/epub+zip'
+    });
+    if (error) throw error;
+    $('curso-status').textContent = 'EPUB enviado com sucesso para o armazenamento privado.';
+  } catch (e) {
+    $('curso-status').textContent = 'Erro no upload: ' + e.message;
+  } finally { btn.disabled = false; }
+});
+
+$('btn-curso-download')?.addEventListener('click', async () => {
+  try {
+    const { data, error } = await supabase.storage.from('ebooks').createSignedUrl('curso-python-160-aulas.epub', 300, { download: true });
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank', 'noopener');
+  } catch (e) {
+    $('curso-status').textContent = 'O EPUB ainda não está disponível no armazenamento privado. Envie-o primeiro pelo botão de upload.';
+  }
+});
+
+
 init();
