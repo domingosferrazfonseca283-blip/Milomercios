@@ -154,6 +154,7 @@ $('btn-pedir').onclick = async () => {
     $('comprovativo-area').style.display = 'block';
     $('comprovativo-status').textContent = 'Pedido criado. Faça o pagamento e envie o comprovativo.';
     await carregarSubscricao();
+    await carregarCursoPython();
   } catch (e) { alert('Não foi possível criar o pedido: ' + e.message); }
 };
 
