@@ -31,6 +31,7 @@ create table if not exists public.products (
   nome text not null, preco numeric(14,2) not null check (preco > 0), stock integer not null default 0 check (stock >= 0),
   categoria text not null default 'outros', descricao text not null default '', imagem_url text not null default '',
   ativo boolean not null default false, estado_aprovacao public.product_approval not null default 'pendente',
+  tipo_produto text not null default 'fisico' check (tipo_produto in ('fisico','digital_curso')),
   avaliacao_media numeric(3,2) not null default 0, avaliacao_quantidade integer not null default 0,
   criado_em timestamptz not null default now(), atualizado_em timestamptz not null default now()
 );
@@ -60,6 +61,19 @@ create table if not exists public.reviews (
 );
 
 create index if not exists products_active_idx on public.products(ativo, categoria);
+create index if not exists products_type_idx on public.products(tipo_produto, ativo);
+
+create table if not exists public.course_access (
+  id uuid primary key default gen_random_uuid(),
+  vendedor_id uuid not null references public.profiles(id) on delete cascade,
+  product_id uuid not null references public.products(id) on delete cascade,
+  order_id uuid not null references public.orders(id) on delete cascade,
+  estado text not null default 'pago' check (estado in ('pago','revogado')),
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now(),
+  unique(vendedor_id, product_id)
+);
+create index if not exists course_access_user_idx on public.course_access(vendedor_id, product_id, estado);
 create index if not exists products_seller_idx on public.products(vendedor_id);
 create index if not exists requests_seller_idx on public.subscription_requests(vendedor_id, criado_em desc);
 create index if not exists orders_customer_idx on public.orders(cliente_id, criado_em desc);
@@ -80,6 +94,7 @@ alter table public.subscription_config enable row level security;
 alter table public.subscription_requests enable row level security;
 alter table public.orders enable row level security;
 alter table public.reviews enable row level security;
+alter table public.course_access enable row level security;
 
 -- Profiles
  drop policy if exists profiles_select on public.profiles;
@@ -99,7 +114,13 @@ create policy stores_owner_update on public.stores for update to authenticated u
 
 -- Products
  drop policy if exists products_public_read on public.products;
-create policy products_public_read on public.products for select to anon, authenticated using (ativo = true or vendedor_id = auth.uid() or public.is_admin());
+create policy products_public_read on public.products for select to anon, authenticated using (
+  (ativo = true and (tipo_produto = 'fisico' or auth.uid() is not null))
+  or vendedor_id = auth.uid()
+  or public.is_admin()
+);
+drop policy if exists products_admin_insert on public.products;
+create policy products_admin_insert on public.products for insert to authenticated with check (public.is_admin());
 drop policy if exists products_seller_insert on public.products;
 create policy products_seller_insert on public.products for insert to authenticated with check (vendedor_id = auth.uid() and public.is_active_seller());
 drop policy if exists products_seller_update on public.products;
@@ -148,6 +169,9 @@ create policy reviews_customer_update on public.reviews for update to authentica
 drop policy if exists reviews_admin_delete on public.reviews;
 create policy reviews_admin_delete on public.reviews for delete to authenticated using (public.is_admin());
 
+drop policy if exists course_access_read on public.course_access;
+create policy course_access_read on public.course_access for select to authenticated using (vendedor_id = auth.uid() or public.is_admin());
+
 create or replace function public.refresh_product_rating()
 returns trigger language plpgsql security definer set search_path = public
 as $$ begin
@@ -175,24 +199,62 @@ begin
     if v_qtd is null or v_qtd < 1 or v_qtd > 10000 then raise exception 'Quantidade inválida para o produto %', v_id; end if;
     select * into v_product from public.products where id = v_id and ativo = true for update;
     if not found then raise exception 'Produto % não está disponível', v_id; end if;
-    if v_product.stock < v_qtd then raise exception 'Stock insuficiente para % (disponível: %)', v_product.nome, v_product.stock; end if;
+    if v_product.tipo_produto = 'digital_curso' and exists (select 1 from public.course_access where vendedor_id = v_cliente and product_id = v_product.id and estado = 'pago') then
+      raise exception 'Este curso já foi adquirido por este utilizador';
+    end if;
+    if v_product.tipo_produto = 'fisico' and v_product.stock < v_qtd then raise exception 'Stock insuficiente para % (disponível: %)', v_product.nome, v_product.stock; end if;
     v_existing_qty := coalesce((select sum((x->>'quantidade')::integer) from jsonb_array_elements(v_items) x where (x->>'id')::uuid = v_product.id), 0);
     if v_existing_qty = 0 then
-      v_items := v_items || jsonb_build_array(jsonb_build_object('id', v_product.id, 'nome', v_product.nome, 'preco', v_product.preco, 'quantidade', v_qtd, 'categoria', v_product.categoria, 'imagem_url', v_product.imagem_url, 'vendedor_id', v_product.vendedor_id));
+      v_items := v_items || jsonb_build_array(jsonb_build_object('id', v_product.id, 'nome', v_product.nome, 'preco', v_product.preco, 'quantidade', v_qtd, 'categoria', v_product.categoria, 'imagem_url', v_product.imagem_url, 'vendedor_id', v_product.vendedor_id, 'tipo_produto', v_product.tipo_produto));
     else
       v_items := (select jsonb_agg(case when (x->>'id')::uuid = v_product.id then jsonb_set(x, '{quantidade}', to_jsonb((x->>'quantidade')::integer + v_qtd)) else x end) from jsonb_array_elements(v_items) x);
     end if;
     v_total := v_total + (v_product.preco * v_qtd);
-    update public.products set stock = stock - v_qtd, atualizado_em = now() where id = v_product.id;
+    if v_product.tipo_produto = 'fisico' then update public.products set stock = stock - v_qtd, atualizado_em = now() where id = v_product.id; end if;
     if not v_product.vendedor_id = any(v_seller_ids) then v_seller_ids := array_append(v_seller_ids, v_product.vendedor_id); end if;
   end loop;
   insert into public.orders(cliente_id, customer, items, total, payment_method, payment_status, order_status, seller_ids)
   values (v_cliente, p_customer, v_items, v_total, p_payment_method, 'aguardando_pagamento', 'aguardando_pagamento', v_seller_ids) returning id into v_order_id;
   return jsonb_build_object('orderId', v_order_id, 'total', v_total, 'items', v_items, 'sellerIds', to_jsonb(v_seller_ids));
 end; $$;
+
 revoke execute on function public.criar_encomenda_segura(jsonb, text, jsonb) from public;
 revoke execute on function public.criar_encomenda_segura(jsonb, text, jsonb) from anon;
 grant execute on function public.criar_encomenda_segura(jsonb, text, jsonb) to authenticated;
 
 -- Depois de criar o primeiro utilizador administrador no Supabase Auth, execute:
 -- update public.profiles set tipo='admin', estado_conta='ativo', email='domingosferrazfonseca283@gmail.com' where lower(email)='domingosferrazfonseca283@gmail.com';
+
+
+create or replace function public.grant_course_access_on_paid_order()
+returns trigger language plpgsql security definer set search_path = public
+as $$
+declare item jsonb; pid uuid;
+begin
+  if new.payment_status = 'pago' and (old.payment_status is distinct from 'pago') then
+    for item in select value from jsonb_array_elements(new.items) loop
+      if item->>'tipo_produto' = 'digital_curso' then
+        pid := (item->>'id')::uuid;
+        insert into public.course_access(vendedor_id, product_id, order_id, estado)
+        values (new.cliente_id, pid, new.id, 'pago')
+        on conflict (vendedor_id, product_id) do update set estado='pago', order_id=excluded.order_id, atualizado_em=now();
+      end if;
+    end loop;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists orders_course_access on public.orders;
+create trigger orders_course_access after update of payment_status on public.orders for each row execute function public.grant_course_access_on_paid_order();
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('ebooks', 'ebooks', false, 20971520, array['application/epub+zip','application/octet-stream'])
+on conflict (id) do update set public=false, file_size_limit=20971520, allowed_mime_types=excluded.allowed_mime_types;
+
+drop policy if exists ebooks_admin_insert on storage.objects;
+create policy ebooks_admin_insert on storage.objects for insert to authenticated with check (bucket_id='ebooks' and public.is_admin());
+drop policy if exists ebooks_admin_update on storage.objects;
+create policy ebooks_admin_update on storage.objects for update to authenticated using (bucket_id='ebooks' and public.is_admin()) with check (bucket_id='ebooks' and public.is_admin());
+drop policy if exists ebooks_read_access on storage.objects;
+create policy ebooks_read_access on storage.objects for select to authenticated using (
+  bucket_id='ebooks' and (public.is_admin() or exists (select 1 from public.course_access ca where ca.vendedor_id=auth.uid() and ca.estado='pago'))
+);
